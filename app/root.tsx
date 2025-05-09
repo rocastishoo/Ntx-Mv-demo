@@ -7,17 +7,18 @@ import {
   Scripts,
   ScrollRestoration,
   useLoaderData,
-  useRevalidator,
+  // useRevalidator, // Might not be needed if auth state changes are removed
 } from "@remix-run/react";
 import type { LinksFunction, LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import tailwindStyles from "./tailwind.css?url";
-import { createSupabaseServerClient, supabase } from "./supabaseClient";
-import type { SupabaseClient, User } from "@supabase/supabase-js";
+// import { createSupabaseServerClient, supabase } from "./supabaseClient"; // Removed
+// import type { SupabaseClient, User } from "@supabase/supabase-js"; // Removed
 
-export type OutletContextType = {
-  supabase: SupabaseClient<any, "public", any>;
-};
+// export type OutletContextType = { // Removed or simplify if no context needed
+//   supabase: SupabaseClient<any, "public", any>;
+// };
+export type OutletContextType = {}; // Simplified context
 
 export const meta: MetaFunction = () => {
   return [
@@ -45,47 +46,48 @@ export const links: LinksFunction = () => [
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const env = {
-    SUPABASE_URL: process.env.VITE_PUBLIC_SUPABASE_URL!,
-    SUPABASE_ANON_KEY: process.env.VITE_PUBLIC_SUPABASE_ANON_KEY!,
+    // Keep these if your UI might still reference them, otherwise remove
+    // SUPABASE_URL: process.env.VITE_PUBLIC_SUPABASE_URL!,
+    // SUPABASE_ANON_KEY: process.env.VITE_PUBLIC_SUPABASE_ANON_KEY!,
   };
 
-  const { supabase, headers } = createSupabaseServerClient(request);
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // const { supabase, headers } = createSupabaseServerClient(request); // Removed
+  // const {
+  //   data: { user },
+  // } = await supabase.auth.getUser(); // Removed
 
   return json(
     {
       env,
-      user,
-    },
-    {
-      headers,
+      user: null, // No user data anymore
     }
+    // { // Headers might not be needed if no Supabase client involved
+    //   headers,
+    // }
   );
 };
 
 export default function App() {
-  const { env, user } = useLoaderData<typeof loader>();
-  const { revalidate } = useRevalidator();
+  const { env, user } = useLoaderData<typeof loader>(); // User will be null
+  // const { revalidate } = useRevalidator(); // Removed if not used
 
-  const [supabaseClient] = useState(() => supabase);
+  // const [supabaseClient] = useState(() => supabase); // Removed
 
-  const serverUserId = user?.id;
+  // const serverUserId = user?.id; // User is null, so this will be undefined
 
-  useEffect(() => {
-    const {
-      data: { subscription },
-    } = supabaseClient.auth.onAuthStateChange((event, session) => {
-      if (session?.user?.id !== serverUserId) {
-        revalidate();
-      }
-    });
+  // useEffect(() => { // Removed Supabase auth state listener
+  //   const {
+  //     data: { subscription },
+  //   } = supabaseClient.auth.onAuthStateChange((event, session) => {
+  //     if (session?.user?.id !== serverUserId) {
+  //       revalidate();
+  //     }
+  //   });
 
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, [serverUserId, revalidate, supabaseClient]);
+  //   return () => {
+  //     subscription.unsubscribe();
+  //   };
+  // }, [serverUserId, revalidate, supabaseClient]);
 
   return (
     <html lang="en" data-theme="light">
@@ -97,7 +99,11 @@ export default function App() {
       </head>
       <body>
         <Outlet
-          context={{ supabase: supabaseClient } satisfies OutletContextType}
+          context={
+            {
+              /* supabase: supabaseClient */
+            } satisfies OutletContextType
+          } // Removed supabase from context
         />
         <ScrollRestoration />
         <script

@@ -81,8 +81,10 @@ const Header: React.FC<HeaderProps> = ({
           {clients.length > 0 ? (
             clients.map((client) => (
               <li key={client.id}>
-                {/* Link to the specific client page */}
-                <Link to={`/client/${client.id}`}>{client.client_name}</Link>
+                {/* Link to the specific client page using client_name */}
+                <Link to={`/client/${encodeURIComponent(client.client_name)}`}>
+                  {client.client_name}
+                </Link>
               </li>
             ))
           ) : (

@@ -1,5 +1,11 @@
 import ClientList from "~/components/ClientList";
 
+// Mock client data
+const mockClients = [
+  { id: "1", client_name: "Elisa Garcia" },
+  { id: "2", client_name: "Bad Bunny" },
+];
+
 export default function DashboardIndexPage() {
   return (
     <div className="flex flex-col items-center justify-start min-h-screen h-full w-full bg-base-200 p-6">
@@ -27,7 +33,7 @@ export default function DashboardIndexPage() {
       </div>
 
       <div className="w-96 mt-6">
-        <ClientList />
+        <ClientList clients={mockClients} />
       </div>
     </div>
   );

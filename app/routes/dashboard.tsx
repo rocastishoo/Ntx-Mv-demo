@@ -1,203 +1,66 @@
-import type { LoaderFunctionArgs, ActionFunctionArgs } from "@remix-run/node";
-import { redirect, json } from "@remix-run/node";
-import { Outlet, useLoaderData } from "@remix-run/react";
-import { createSupabaseServerClient } from "~/supabaseClient";
+import { Outlet } from "@remix-run/react";
+import { redirect } from "@remix-run/node";
+import type { ActionFunctionArgs } from "@remix-run/node";
+// ClientList import might not be needed here anymore if not used directly
+// import ClientList from "~/components/ClientList";
+// import { createSupabaseServerClient } from "~/supabaseClient"; // Removed
+// import { getUser } from "~/auth"; // Removed
+// import CreateClientForm from "~/components/CreateClientForm"; // Removed for now
 
-// The loader function for the dashboard segment (layout and its children)
-export const loader = async ({ request }: LoaderFunctionArgs) => {
-  console.log(
-    "Dashboard.tsx LOADER EXECUTED - Checking authentication for segment"
-  );
-  // Create a Supabase client instance for this request
-  const { supabase, headers } = createSupabaseServerClient(request);
+// Removed loader function
 
-  // Get the user session
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-
-  if (authError || !user) {
-    console.error(
-      "Authentication error or no user in dashboard layout loader:",
-      authError
-    );
-    // If no user or an error, redirect to the login page.
-    // Pass the request headers for Supabase to manage cookies correctly.
-    return redirect("/login", { headers });
-  }
-
-  // Fetch the clients for this user
-  const { data: clients, error: clientsError } = await supabase
-    .from("clients")
-    .select("id, client_name")
-    .eq("user_id", user.id);
-
-  if (clientsError) {
-    console.error("Error fetching clients:", clientsError);
-    // Return an empty array if there was an error
-    return json({ clients: [] }, { headers });
-  }
-
-  // Return the clients data
-  return json({ clients }, { headers });
-};
-
-// Action function to handle client creation and deletion
-export const action = async ({ request }: ActionFunctionArgs) => {
-  // Create a Supabase client instance for this request
-  const { supabase, headers } = createSupabaseServerClient(request);
-
-  // Verify authenticated user
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-
-  if (authError || !user) {
-    console.error(
-      "Authentication error or no user in dashboard action:",
-      authError
-    );
-    return redirect("/login", { headers });
-  }
-
-  // Get form data
+export async function action({ request }: ActionFunctionArgs) {
+  console.log("Dashboard layout action triggered"); // Updated log message
   const formData = await request.formData();
-  const actionType = formData.get("_action");
+  const clientName = formData.get("clientName");
 
-  // Handle client deletion
-  if (actionType === "delete") {
-    const clientId = formData.get("clientId");
+  console.log("Received clientName:", clientName);
+  console.log("Type of clientName:", typeof clientName);
 
-    // Validate client ID
-    if (!clientId || typeof clientId !== "string") {
-      return json({ error: "Missing client ID" }, { status: 400, headers });
-    }
-
-    // Authorization check - verify the client belongs to the user
-    const { data: clientData, error: authCheckError } = await supabase
-      .from("clients")
-      .select("id")
-      .eq("id", clientId)
-      .eq("user_id", user.id)
-      .single();
-
-    if (authCheckError || !clientData) {
-      return json(
-        {
-          error: "Client not found or you do not have permission to delete it",
-        },
-        { status: 404, headers }
-      );
-    }
-
-    // Delete the client
-    const { error: deleteError } = await supabase
-      .from("clients")
-      .delete()
-      .eq("id", clientId);
-
-    if (deleteError) {
-      console.error("Error deleting client:", deleteError);
-      return json({ error: deleteError.message }, { status: 500, headers });
-    }
-
-    // Redirect back to dashboard after successful deletion
-    return redirect("/dashboard", { headers });
+  if (typeof clientName === "string" && clientName.trim() !== "") {
+    const trimmedName = clientName.trim();
+    console.log(
+      "Redirecting to:",
+      `/client/${encodeURIComponent(trimmedName)}`
+    );
+    return redirect(`/client/${encodeURIComponent(trimmedName)}`);
   }
-  // Handle client update
-  else if (actionType === "update") {
-    const clientId = formData.get("clientId");
-    const clientName = formData.get("clientName");
 
-    // Validate inputs
-    if (!clientId || typeof clientId !== "string") {
-      return json({ error: "Missing client ID" }, { status: 400, headers });
-    }
+  console.log("Condition for redirect not met. clientName:", clientName);
+  return null; // Or handle error appropriately
+}
 
-    if (
-      !clientName ||
-      typeof clientName !== "string" ||
-      clientName.trim() === ""
-    ) {
-      return json(
-        { error: "Client name is required" },
-        { status: 400, headers }
-      );
-    }
+export default function DashboardSegment() {
+  // const { user, clients, error } = useLoaderData<typeof loader>(); // Removed
+  // const clients = mockClients; // This instance of clients is no longer directly used here
+  const user = null; // Provide null or mock user
+  const error = null; // Provide null or mock error
 
-    // Authorization check - verify the client belongs to the user
-    const { data: clientData, error: authCheckError } = await supabase
-      .from("clients")
-      .select("id")
-      .eq("id", clientId)
-      .eq("user_id", user.id)
-      .single();
+  // if (error) {
+  //   return (
+  //     <div className="text-red-500 p-4">
+  //       <p>Error loading dashboard data: {error}</p>
+  //     </div>
+  //   );
+  // }
 
-    if (authCheckError || !clientData) {
-      return json(
-        {
-          error: "Client not found or you do not have permission to update it",
-        },
-        { status: 404, headers }
-      );
-    }
+  // console.log("User in DashboardSegment:", user);
+  // console.log("Clients in DashboardSegment:", clients);
 
-    // Update the client name
-    const { error: updateError } = await supabase
-      .from("clients")
-      .update({ client_name: clientName.trim() })
-      .eq("id", clientId);
-
-    if (updateError) {
-      console.error("Error updating client:", updateError);
-      return json({ error: updateError.message }, { status: 500, headers });
-    }
-
-    // Redirect back to dashboard after successful update
-    return redirect("/dashboard", { headers });
-  }
-  // Handle client creation (existing functionality)
-  else {
-    const clientName = formData.get("clientName");
-
-    // Validate client name
-    if (
-      !clientName ||
-      typeof clientName !== "string" ||
-      clientName.trim() === ""
-    ) {
-      return json(
-        { error: "Client name is required" },
-        { status: 400, headers }
-      );
-    }
-
-    // Insert new client into database
-    const { data: newClient, error: insertError } = await supabase
-      .from("clients")
-      .insert({ user_id: user.id, client_name: clientName.trim() })
-      .select("id")
-      .single();
-
-    if (insertError) {
-      console.error("Error creating client:", insertError);
-      return json(
-        { error: "Failed to create client" },
-        { status: 500, headers }
-      );
-    }
-
-    // Redirect to the new client page
-    return redirect(`/client/${newClient.id}`, { headers });
-  }
-};
-
-// The default component for the layout route
-// It renders an <Outlet /> where the matching child route will be displayed
-export default function DashboardLayout() {
-  const { clients } = useLoaderData<typeof loader>();
-
-  return <Outlet context={{ clients }} />;
+  return (
+    <div className="p-4 md:p-6">
+      {/* <h1 className="text-2xl font-semibold text-gray-800 mb-6">
+        Client Dashboard
+      </h1> */}
+      {/* Display welcome message or user info if available */}
+      {/* {user && (
+        <p className="text-gray-600 mb-4">
+          Welcome, {user.email || "User"}!
+        </p>
+      )} */}
+      {/* The form and ClientList are removed from here */}
+      {/* They will be rendered by dashboard._index.tsx via the Outlet */}
+      <Outlet /> {/* Important: This renders nested routes */}
+    </div>
+  );
 }
